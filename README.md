@@ -6,7 +6,7 @@ from plaintext or RLE files, and supports click/drag drawing.
 
 ## License
 
-Copyright (C) 2026 Sebastian Bassi. Licensed under the **GNU General Public
+Copyright (C) 2026 [Toyoko LLC](https://www.toyoko.io/). Licensed under the **GNU General Public
 License, version 3 or (at your option) any later version** (GPL-3.0-or-later).
 See [LICENSE](LICENSE) for the full text, or <https://www.gnu.org/licenses/>.
 

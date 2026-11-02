@@ -16,7 +16,7 @@
  * Pattern object shape: { width, height, data: Uint8Array } where data is
  * row-major and a non-zero value means "alive".
  *
- * Copyright (C) 2026 Sebastian Bassi
+ * Copyright (C) 2026 Toyoko LLC (<https://www.toyoko.io/>)
  *
  * This file is part of CGL.
  *
