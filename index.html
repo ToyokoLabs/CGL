@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conway's Game of Life</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --panel: #0f172a;
+      --panel-raised: #14203a;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #4ade80;
+      --accent-soft: rgba(74, 222, 128, 0.14);
+      --border: rgba(148, 163, 184, 0.18);
+      --border-strong: rgba(148, 163, 184, 0.34);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 20px 72px;
+      background:
+        radial-gradient(1100px 700px at 15% -15%, #132238 0%, transparent 60%),
+        radial-gradient(900px 600px at 110% 10%, rgba(34, 197, 94, 0.07) 0%, transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: min(560px, 100%);
+      min-width: 0;
+    }
+
+    .life-host { width: 100%; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.55rem, 5vw, 2.05rem);
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 48ch;
+    }
+
+    .board {
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 60px -34px rgba(0, 0, 0, 0.95);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .board.dragging {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft), 0 24px 60px -34px rgba(0, 0, 0, 0.95);
+    }
+
+    .life-host canvas {
+      display: block;
+      border-radius: 8px;
+    }
+
+    /* Shown only if the module failed to load (e.g. opened via file://). */
+    .life-host:empty::after {
+      content: "The simulation can’t start on a file:// page. Serve this folder over HTTP — for example: python3 -m http.server 8000 — then open http://localhost:8000.";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 340px;
+      padding: 28px;
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    button,
+    .file-btn {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--panel-raised);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+    }
+
+    button:hover,
+    .file-btn:hover {
+      background: #1a2a4b;
+      border-color: var(--border-strong);
+    }
+
+    button:active,
+    .file-btn:active { transform: translateY(1px); }
+
+    button.primary {
+      min-width: 78px;
+      background: var(--accent);
+      border-color: transparent;
+      color: #052e16;
+      font-weight: 650;
+    }
+
+    button.primary:hover { background: #6ee7a0; }
+
+    button:focus-visible,
+    .file-btn:focus-within,
+    input[type="range"]:focus-visible,
+    input[type="checkbox"]:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .speed {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    input[type="range"] {
+      width: 108px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .speed output {
+      min-width: 62px;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+    }
+
+    .controls.secondary {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .file-btn { padding: 6px 12px; font-size: 0.86rem; position: relative; }
+
+    /* Keep the file input focusable for keyboard users without showing it. */
+    .file-btn input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .hint { margin-left: auto; font-size: 0.8rem; color: #64748b; }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin: 14px 2px 0;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stats span + span::before {
+      content: "·";
+      margin-right: 10px;
+      color: #475569;
+    }
+
+    .stats #generation { color: var(--text); }
+
+    .notice {
+      margin: 12px 2px 0;
+      padding: 9px 12px;
+      border: 1px solid rgba(250, 204, 21, 0.28);
+      border-radius: 9px;
+      background: rgba(250, 204, 21, 0.08);
+      color: #fde68a;
+      font-size: 0.82rem;
+    }
+
+    .notice.error {
+      border-color: rgba(248, 113, 113, 0.34);
+      background: rgba(248, 113, 113, 0.1);
+      color: #fca5a5;
+    }
+
+    .help {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.885rem;
+    }
+
+    .help summary {
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 550;
+    }
+
+    .help p { margin: 12px 0; }
+
+    .help code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(148, 163, 184, 0.14);
+      font-size: 0.84em;
+    }
+
+    .help pre {
+      margin: 12px 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .help pre code {
+      padding: 0;
+      background: none;
+      font-size: 1em;
+      white-space: pre;
+    }
+
+    @media (max-width: 460px) {
+      body { padding: 28px 14px 48px; }
+      .speed { margin-left: 0; width: 100%; }
+      .hint { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <p class="eyebrow">A tiny canvas module</p>
+      <h1>Conway's Game of Life</h1>
+      <p class="subtitle">
+        A 50 × 50 world with wrapping edges. Click or drag on the grid to draw.
+        Drop a pattern file on it to load your own.
+      </p>
+    </header>
+
+    <section class="board" id="board">
+      <div class="life-host" id="life"></div>
+    </section>
+
+    <div class="controls">
+      <button type="button" class="primary" id="toggle">Play</button>
+      <button type="button" id="step">Step</button>
+      <button type="button" id="random">Random</button>
+      <button type="button" id="clear">Clear</button>
+      <button type="button" id="reset">Reset</button>
+      <label class="speed" for="speed">
+        Speed
+        <input type="range" id="speed" min="1" max="30" step="1" value="8">
+        <output id="speed-value" for="speed">8 gen/s</output>
+      </label>
+    </div>
+
+    <div class="controls secondary">
+      <label class="check">
+        <input type="checkbox" id="wrap" checked>
+        Wrap edges
+      </label>
+      <label class="file-btn">
+        Open pattern…
+        <input type="file" id="file" accept=".txt,.cells,.rle,.life,text/plain">
+      </label>
+      <span class="hint">or drop a .txt / .rle file on the grid</span>
+    </div>
+
+    <p class="stats">
+      <span id="generation">Gen 0</span>
+      <span id="population">0 alive</span>
+      <span id="pattern-name">—</span>
+    </p>
+
+    <p class="notice" id="notice" hidden></p>
+
+    <details class="help">
+      <summary>About this page &amp; how to embed the module</summary>
+      <p>
+        The simulation is one dependency-free ES module, <code>game-of-life.js</code>,
+        rendered to a canvas. Drop it into any page:
+      </p>
+      <pre><code>&lt;div id="life"&gt;&lt;/div&gt;
+&lt;script type="module"&gt;
+  import { GameOfLife } from './game-of-life.js';
+
+  const life = new GameOfLife('#life', {
+    cols: 50, rows: 50, cellSize: 10,
+  });
+
+  await life.loadPatternFromURL('patterns/glider.txt');
+  life.start();
+&lt;/script&gt;</code></pre>
+      <p>
+        Pattern files can be plaintext (<code>O</code> alive, <code>.</code> dead,
+        <code>!</code> comments) or RLE. Patterns are centered on the grid and
+        clipped if they are larger than it. See <code>README.md</code> for the
+        full API and file formats.
+      </p>
+      <p>
+        ES modules and <code>fetch()</code> are blocked on <code>file://</code>
+        pages in most browsers, so serve this folder over HTTP — for example
+        <code>python3 -m http.server 8000</code> — and open
+        <code>http://localhost:8000</code>.
+      </p>
+    </details>
+  </main>
+
+  <script type="module">
+    import { GameOfLife } from './game-of-life.js';
+
+    // Used only when patterns/glider.txt cannot be fetched (e.g. file://).
+    const FALLBACK_PATTERN = `!Name: Glider (built-in)
+.O.
+..O
+OOO`;
+
+    const els = {
+      board: document.getElementById('board'),
+      toggle: document.getElementById('toggle'),
+      step: document.getElementById('step'),
+      random: document.getElementById('random'),
+      clear: document.getElementById('clear'),
+      reset: document.getElementById('reset'),
+      speed: document.getElementById('speed'),
+      speedValue: document.getElementById('speed-value'),
+      wrap: document.getElementById('wrap'),
+      file: document.getElementById('file'),
+      generation: document.getElementById('generation'),
+      population: document.getElementById('population'),
+      patternName: document.getElementById('pattern-name'),
+      notice: document.getElementById('notice'),
+    };
+
+    const life = new GameOfLife('#life', {
+      cols: 50,
+      rows: 50,
+      cellSize: 10,
+      speed: 125,
+      wrap: true,
+      onUpdate: ({ generation, population, running }) => {
+        els.generation.textContent = `Gen ${generation.toLocaleString()}`;
+        els.population.textContent = `${population.toLocaleString()} alive`;
+        els.toggle.textContent = running ? 'Pause' : 'Play';
+      },
+    });
+
+    let currentPattern = null;
+    let currentPatternName = '';
+
+    /* ---------------------------------------------------------------- *
+     * Pattern handling
+     * ---------------------------------------------------------------- */
+
+    function patternNameFrom(text, fallback) {
+      const cellsName = text.match(/^\s*!\s*name\s*:\s*(.+)$/im);
+      if (cellsName) return cellsName[1].trim();
+
+      const rleName = text.match(/^#N\s+(.+)$/m);
+      if (rleName) return rleName[1].trim();
+
+      return fallback.replace(/\.[a-z0-9]+$/i, '');
+    }
+
+    function applyPattern(text, name) {
+      life.loadPattern(text);
+      currentPattern = text;
+      currentPatternName = name;
+      els.patternName.textContent = name;
+      hideNotice();
+    }
+
+    async function loadFile(file) {
+      try {
+        const text = await file.text();
+        applyPattern(text, patternNameFrom(text, file.name));
+      } catch (error) {
+        showNotice(`Could not load “${file.name}”: ${error.message}`, 'error');
+      }
+    }
+
+    function showNotice(message, kind = 'info') {
+      els.notice.textContent = message;
+      els.notice.classList.toggle('error', kind === 'error');
+      els.notice.hidden = false;
+    }
+
+    function hideNotice() {
+      els.notice.hidden = true;
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Controls
+     * ---------------------------------------------------------------- */
+
+    els.toggle.addEventListener('click', () => life.toggle());
+
+    els.step.addEventListener('click', () => {
+      life.pause();
+      life.step();
+    });
+
+    els.random.addEventListener('click', () => life.randomize(0.3));
+
+    els.clear.addEventListener('click', () => {
+      life.pause();
+      life.clear();
+    });
+
+    els.reset.addEventListener('click', () => {
+      if (!currentPattern) return;
+      life.pause();
+      applyPattern(currentPattern, currentPatternName);
+    });
+
+    els.speed.addEventListener('input', () => {
+      const generationsPerSecond = Number(els.speed.value);
+      els.speedValue.textContent = `${generationsPerSecond} gen/s`;
+      life.setSpeed(1000 / generationsPerSecond);
+    });
+
+    els.wrap.addEventListener('change', () => life.setWrap(els.wrap.checked));
+
+    els.file.addEventListener('change', () => {
+      const file = els.file.files && els.file.files[0];
+      if (file) loadFile(file);
+      els.file.value = '';
+    });
+
+    /* ---------------------------------------------------------------- *
+     * Drag and drop
+     * ---------------------------------------------------------------- */
+
+    let dragDepth = 0;
+
+    els.board.addEventListener('dragenter', (event) => {
+      event.preventDefault();
+      dragDepth += 1;
+      els.board.classList.add('dragging');
+    });
+
+    els.board.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    });
+
+    els.board.addEventListener('dragleave', () => {
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) els.board.classList.remove('dragging');
+    });
+
+    els.board.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dragDepth = 0;
+      els.board.classList.remove('dragging');
+      const file = event.dataTransfer && event.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+
+    /* ---------------------------------------------------------------- *
+     * Boot
+     * ---------------------------------------------------------------- */
+
+    (async function boot() {
+      try {
+        const response = await fetch('patterns/glider.txt', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const text = await response.text();
+        applyPattern(text, patternNameFrom(text, 'Glider'));
+      } catch (error) {
+        applyPattern(FALLBACK_PATTERN, 'Glider (built-in)');
+        showNotice(
+          'Could not fetch patterns/glider.txt — using a built-in glider instead. ' +
+          'If you opened index.html directly, serve the folder over HTTP so pattern files can load.',
+        );
+      }
+      life.start();
+    }());
+  </script>
+</body>
+</html>

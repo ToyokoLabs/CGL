@@ -1,0 +1,12 @@
+!Name: Glider
+!Author: Richard K. Guy
+!The smallest and most famous spaceship. It travels one cell
+!diagonally (down-right) every four generations.
+!
+!Plaintext pattern format:
+!  O = alive, . = dead, ! at the start of a line = comment.
+!Lines may be different lengths; missing cells on the right are dead.
+!
+.O.
+..O
+OOO
