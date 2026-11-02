@@ -4,6 +4,8 @@ A small, dependency-free Game of Life you can include in any web page. No build
 step, no framework, no external assets. It renders to a canvas, loads patterns
 from plaintext or RLE files, and supports click/drag drawing.
 
+![Sample page running the DNA Linux pattern](assets/screenshot.png)
+
 ## License
 
 Copyright (C) 2026 [Toyoko LLC](https://www.toyoko.io/). Licensed under the **GNU General Public
@@ -20,6 +22,7 @@ SPDX-License-Identifier: `GPL-3.0-or-later`
 | `index.html` | Sample page with controls, file loading, and drag-and-drop. |
 | `patterns/glider.txt` | Initial pattern used by the sample (plaintext format). |
 | `patterns/dnalinux.txt` | The DNA Linux logo rasterised to 50×50 (a 48×48 logo area with a one-cell dead border). |
+| `assets/screenshot.png` | Screenshot of the sample page, shown above. |
 
 ## Run the sample
 
